@@ -2,32 +2,33 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { type Hit, docs, runSearch } from "@/lib/content";
 import { useStatus } from "../app/Status";
-import { ArrowRight, SearchIcon } from "../Icons";
+import { DocPage } from "../DocPage";
+import { ArrowRight, ArrowUpRight, Close, SearchIcon } from "../Icons";
 
 const COLLECTIONS = ["Constitution", "ODPP publications", "Laws of Kenya"] as const;
+const RECENT = ["plea agreement", "Article 157", "public interest test", "Article 49"];
+
+const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function Marked({ text, term }: { text: string; term: string }) {
-  const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const words = term.split(/\s+/).filter((w) => w.length > 2);
   if (!words.length) return <>{text}</>;
-  // Prefer the whole phrase; fall back to its words.
   const re = new RegExp(`(${[esc(term), ...words.map(esc)].join("|")})`, "gi");
-  return (
-    <>
-      {text.split(re).map((p, i) => (i % 2 ? <mark key={i}>{p}</mark> : <Fragment key={i}>{p}</Fragment>))}
-    </>
-  );
+  return <>{text.split(re).map((p, i) => (i % 2 ? <mark key={i}>{p}</mark> : <Fragment key={i}>{p}</Fragment>))}</>;
 }
 
+/**
+ * Search in the same shape as the chat: results in a centred column,
+ * the search bar pinned at the bottom, and the selected source on the side.
+ */
 export function SearchView({
   q,
   base,
   readerBase,
   askHref,
-  libraryHref,
   staff,
 }: {
   q: string;
@@ -42,219 +43,207 @@ export function SearchView({
   const [value, setValue] = useState(q);
   const [on, setOn] = useState<Record<string, boolean>>({ Constitution: true, "ODPP publications": true, "Laws of Kenya": true });
   const result = useMemo(() => runSearch(q), [q]);
+  const hits = result ? result.hits.filter((h) => on[docs[h.doc].collection]) : [];
+  const [sel, setSel] = useState(0);
+  const [sideOpen, setSideOpen] = useState(true);
+  // On phones the source opens full screen, so start with it closed.
+  useEffect(() => {
+    if (window.innerWidth <= 900) setSideOpen(false);
+  }, []);
+  const current: Hit | undefined = hits[Math.min(sel, hits.length - 1)];
+  const canvasRef = useRef<HTMLDivElement>(null);
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const v = value.trim();
-    router.push(v ? `${base}?q=${encodeURIComponent(v)}` : base);
+  // Bring the matched passage into view whenever the selected result changes.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !current) return;
+    const words = current.snippet.replace(/…/g, "").trim().split(/\s+/).slice(0, 4).join(" ").toLowerCase();
+    const target = Array.from(canvas.querySelectorAll<HTMLElement>(".clause")).find((c) => c.textContent?.toLowerCase().includes(words));
+    canvas.querySelectorAll(".clause.is-cited").forEach((c) => c.classList.remove("is-cited"));
+    if (target) {
+      target.classList.add("is-cited");
+      canvas.scrollTo({ top: Math.max(0, target.offsetTop - canvas.clientHeight * 0.25), behavior: "smooth" });
+    } else canvas.scrollTo({ top: 0 });
+  }, [current]);
+
+  const go = (v: string) => {
+    const t = v.trim();
+    router.push(t ? `${base}?q=${encodeURIComponent(t)}` : base);
   };
 
-  const field = (
-    <form className={`sfield${q ? " sfield--compact" : ""}`} role="search" onSubmit={submit}>
-      <SearchIcon size={q ? 18 : 20} />
-      <label htmlFor="sq" className="visually-hidden">
-        Search the documents
-      </label>
-      <input id="sq" value={value} onChange={(e) => setValue(e.target.value)} placeholder="An article, section or phrase, e.g. Article 157" autoComplete="off" autoFocus={!q} />
-      {value && (
-        <button type="button" className="sfield-clear link" onClick={() => setValue("")}>
-          Clear
+  const bar = (
+    <div className="sx-dock">
+      <form
+        className="sx-bar"
+        role="search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          go(value);
+        }}
+      >
+        <SearchIcon size={18} />
+        <label htmlFor="sx-q" className="visually-hidden">
+          Search the documents
+        </label>
+        <input id="sx-q" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Search an article, section or phrase" autoComplete="off" autoFocus={!q} />
+        {value && (
+          <button type="button" className="icon-btn sx-clear" aria-label="Clear" onClick={() => setValue("")}>
+            <Close size={16} />
+          </button>
+        )}
+        <button type="submit" className="sx-go" aria-label="Search">
+          <ArrowRight size={18} />
         </button>
-      )}
-      <button type="submit" className="btn btn-primary sfield-go">
-        Search
-      </button>
-    </form>
-  );
-
-  const statusGrid = aiPaused && (
-    <dl className="svc">
-      <div>
-        <dt>AI answers</dt>
-        <dd>
-          <span className="dot dot--crimson" /> Unavailable
-        </dd>
+      </form>
+      <div className="sx-scope">
+        {COLLECTIONS.map((c) => (
+          <label key={c} className="sx-toggle">
+            <input type="checkbox" checked={on[c]} onChange={() => setOn((o) => ({ ...o, [c]: !o[c] }))} />
+            <span>{c}</span>
+          </label>
+        ))}
       </div>
-      {["ODPP publications", "Constitution", "Laws of Kenya"].map((k) => (
-        <div key={k}>
-          <dt>{k}</dt>
-          <dd>
-            <span className="dot" /> Available
-          </dd>
-        </div>
-      ))}
-    </dl>
+    </div>
   );
 
-  /* ---------- Empty ---------- */
+  const paused = aiPaused && (
+    <p className="sx-paused" role="status">
+      <span className="dot dot--crimson" /> AI answers are paused. Search and the reader are working — you’ll get passages, not a written answer.
+    </p>
+  );
+
+  /* ---------- Empty: centred, like a new chat ---------- */
   if (!result)
     return (
-      <div className="search search--empty">
-        {aiPaused && (
-          <div className="paused" role="status">
-            <span className="dot dot--crimson" />
-            <p>
-              <strong>AI answers are paused.</strong> Search and the document reader are working. You’ll get matching
-              passages, not a written answer.
+      <div className="sx sx--empty">
+        <div className="sx-main">
+          <div className="sx-stage">
+            {paused}
+            <h1 className="sx-title enter">Find a provision.</h1>
+            <p className="sx-sub enter" style={{ animationDelay: "60ms" }}>
+              Search the original text of every document. Results are passages, not summaries.
+            </p>
+            <div className="enter" style={{ animationDelay: "110ms" }}>
+              {bar}
+            </div>
+            <div className="sx-recent enter" style={{ animationDelay: "160ms" }}>
+              {RECENT.map((r) => (
+                <Link key={r} href={`${base}?q=${encodeURIComponent(r)}`} className="chip">
+                  {r}
+                </Link>
+              ))}
+            </div>
+            <p className="sx-tip enter" style={{ animationDelay: "200ms" }}>
+              Use quotation marks for an exact phrase. Want a written, cited answer?{" "}
+              <Link href={askHref} className="link">
+                Ask instead
+              </Link>
             </p>
           </div>
-        )}
-        <div className="search-stage">
-          <p className="eyebrow enter">Search</p>
-          <h1 className="display search-title enter" style={{ animationDelay: "50ms" }}>
-            Find a provision.
-          </h1>
-          <p className="lede search-lede enter" style={{ animationDelay: "90ms" }}>
-            Search the original text of every document. Results are passages, not summaries.
-          </p>
-          <div className="enter" style={{ animationDelay: "130ms" }}>
-            {field}
-          </div>
-          <div className="search-scope enter" style={{ animationDelay: "170ms" }}>
-            {COLLECTIONS.map((c) => (
-              <label key={c} className="chk">
-                <input type="checkbox" checked={on[c]} onChange={() => setOn((o) => ({ ...o, [c]: !o[c] }))} />
-                <span>{c}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="search-quiet enter" style={{ animationDelay: "220ms" }}>
-          <div>
-            <p className="eyebrow">Recent searches</p>
-            <ul className="ask-recent">
-              {["plea agreement", "Article 157", "public interest test", "Article 49"].map((s) => (
-                <li key={s}>
-                  <Link href={`${base}?q=${encodeURIComponent(s)}`} className="link">
-                    {s}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="eyebrow">Search tips</p>
-            <ul className="tips">
-              <li>
-                <span className="tip-k">“public interest”</span> Quotation marks match an exact phrase.
-              </li>
-              <li>
-                <span className="tip-k">Art. 157</span> Article and section numbers jump straight to the provision.
-              </li>
-              <li>
-                <span className="tip-k">Ask instead</span> For a written, cited answer, use{" "}
-                <Link href={askHref} className="link">
-                  Ask
-                </Link>
-                .
-              </li>
-            </ul>
-          </div>
         </div>
       </div>
     );
 
-  const hits = result.hits.filter((h) => on[docs[h.doc].collection]);
-  const byCollection = (c: string) => result.hits.filter((h) => docs[h.doc].collection === c).length;
   const docCount = new Set(hits.map((h) => h.doc)).size;
+  const showSide = !!current && sideOpen;
 
-  /* ---------- No results ---------- */
-  if (!result.hits.length)
-    return (
-      <div className="search">
-        <div className="search-bar">{field}</div>
-        <div className="none enter">
-          <h1 className="none-title">No matches.</h1>
-          <p className="none-text">
-            Nothing for “{q}” in ODPP publications or the Constitution of Kenya.
-          </p>
-          <div className="state-actions">
-            <button className="btn btn-primary" onClick={() => router.push(`${base}?q=${encodeURIComponent(q)}&laws=1`)}>
-              Include Laws of Kenya
-            </button>
-            <Link href={libraryHref} className="btn btn-secondary">
-              Browse the library
-            </Link>
-          </div>
-          <p className="meta none-hint">Check the spelling, try a broader phrase, or search by article number.</p>
-        </div>
-      </div>
-    );
-
-  /* ---------- Results ---------- */
   return (
-    <div className="search">
-      <div className="search-bar">{field}</div>
-      <div className="results">
-        <aside className="facets" aria-label="Filter results">
-          <p className="eyebrow">Collections</p>
-          <ul>
-            {COLLECTIONS.map((c) => (
-              <li key={c}>
-                <label className="chk chk--row">
-                  <input type="checkbox" checked={on[c]} onChange={() => setOn((o) => ({ ...o, [c]: !o[c] }))} />
-                  <span>{c}</span>
-                  <span className="facet-n">{byCollection(c)}</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <p className="eyebrow facets-h2">Documents</p>
-          <ul className="facet-docs">
-            {[...new Set(result.hits.map((h) => h.doc))].map((d) => (
-              <li key={d}>
-                <span>{docs[d].short}</span>
-                <span className="facet-n">{result.hits.filter((h) => h.doc === d).length}</span>
-              </li>
-            ))}
-          </ul>
-        </aside>
+    <div className={`sx${showSide ? " has-side" : ""}`}>
+      <div className="sx-main">
+        <header className="sx-head">
+          <span className="sx-q">“{q}”</span>
+          <span className="meta">
+            {hits.length} passages · {docCount} documents
+          </span>
+        </header>
 
-        <section className="hits" aria-label="Results">
-          {statusGrid}
-          {aiPaused && <p className="meta svc-note">AI answers are paused. You’ll get matching passages, not a written answer.</p>}
-          <div className="hits-head">
-            <h1 className="hits-title">
-              {hits.length} passages <span>in {docCount} documents</span>
-            </h1>
-            <span className="meta">Sorted by relevance</span>
-          </div>
-          <ol>
-            {hits.map((h: Hit, i) => {
-              const d = docs[h.doc];
-              const href = `${readerBase}/${h.doc}${h.pdf ? `?page=${h.pdf}` : ""}`;
-              return (
-                <li key={i} className="hit enter" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="hit-top">
-                    <span className="eyebrow">{d.collection === "ODPP publications" ? d.type : d.collection}</span>
-                    <span className={`meta hit-loc${h.locator.startsWith("[") ? " ph" : ""}`}>
-                      {h.locator} · PDF p. {h.pdf || "[00]"}
-                    </span>
-                  </div>
-                  <Link href={href} className="hit-title">
-                    {d.title}
-                  </Link>
-                  <p className="hit-snip">
-                    <Marked text={h.snippet} term={result.term} />
-                  </p>
-                  <div className="hit-actions">
-                    <Link href={href} className="hit-act">
-                      Open the page <ArrowRight size={14} className="arrow" />
-                    </Link>
-                    {staff && !aiPaused && (
-                      <Link href={askHref} className="hit-act hit-act--quiet">
-                        Ask about this passage
-                      </Link>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-          {!hits.length && <p className="meta">All collections are filtered out. Tick one on the left to see results.</p>}
-        </section>
+        <div className="sx-results">
+          {paused}
+          {!result.hits.length ? (
+            <div className="sx-none enter">
+              <h1 className="sx-none-title">No matches.</h1>
+              <p className="sx-none-text">Nothing for “{q}” in ODPP publications or the Constitution of Kenya.</p>
+              <div className="sx-none-actions">
+                <button className="btn btn-primary" onClick={() => setOn({ Constitution: true, "ODPP publications": true, "Laws of Kenya": true })}>
+                  Include Laws of Kenya
+                </button>
+                <Link href={staff ? "/library" : "/#collection"} className="btn btn-secondary">
+                  Browse the library
+                </Link>
+              </div>
+              <p className="meta">Check the spelling, try a broader phrase, or search by article number.</p>
+            </div>
+          ) : !hits.length ? (
+            <p className="meta sx-filtered">Every collection is switched off. Turn one on below to see results.</p>
+          ) : (
+            <ol className="sx-list">
+              {hits.map((h, i) => {
+                const d = docs[h.doc];
+                const active = current === h && showSide;
+                return (
+                  <li key={i} className="enter" style={{ animationDelay: `${i * 40}ms` }}>
+                    <button
+                      className={`sx-hit${active ? " is-active" : ""}`}
+                      onClick={() => {
+                        setSel(i);
+                        setSideOpen(true);
+                      }}
+                    >
+                      <span className="sx-hit-top">
+                        <span className="sx-hit-num">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="sx-hit-type">{d.collection === "ODPP publications" ? d.type : d.collection}</span>
+                        <span className={`sx-hit-loc${h.locator.startsWith("[") ? " ph" : ""}`}>
+                          {h.locator} · p. {h.pdf || "[00]"}
+                        </span>
+                      </span>
+                      <span className="sx-hit-title">{d.title}</span>
+                      <span className="sx-hit-snip">
+                        <Marked text={h.snippet} term={result.term} />
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+
+        {bar}
       </div>
+
+      {showSide && current && (
+        <aside className="sx-side" aria-label="Source">
+          <header className="sx-side-head">
+            <div>
+              <p className="sx-side-type">
+                {docs[current.doc].type} · {current.locator}
+              </p>
+              <h2 className="sx-side-title">{docs[current.doc].title}</h2>
+            </div>
+            <button className="icon-btn" aria-label="Close source" onClick={() => setSideOpen(false)}>
+              <Close size={16} />
+            </button>
+          </header>
+          <div className="sx-side-actions">
+            <Link href={`${readerBase}/${current.doc}${current.pdf ? `?page=${current.pdf}` : ""}`} className="btn btn-primary btn-sm">
+              Open in reader <ArrowUpRight size={14} />
+            </Link>
+            {staff && !aiPaused && (
+              <Link href={askHref} className="btn btn-secondary btn-sm">
+                Ask about this
+              </Link>
+            )}
+            <span className="meta sx-side-page">PDF p. {current.pdf || "[00]"}</span>
+          </div>
+          <div className="sx-side-canvas" ref={canvasRef} key={`${current.doc}-${current.pdf}-${current.locator}`}>
+            <DocPage
+              page={docs[current.doc].pages.find((p) => p.pdf === current.pdf) ?? docs[current.doc].pages[0]}
+              term={result.term.split(/\s+/)[0]}
+              folio={false}
+            />
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

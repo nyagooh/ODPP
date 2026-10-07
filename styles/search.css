@@ -1,0 +1,435 @@
+/* Search, shaped like the chat: centred results, bar pinned at the bottom, source on the side. */
+
+.sx {
+  --sx-h: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: var(--sx-h);
+  background: #fff;
+}
+.public-app .sx {
+  --sx-h: calc(100dvh - 76px);
+}
+.sx.has-side {
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 42%);
+}
+.sx-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Header */
+.sx-head {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 16px 24px 12px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.sx-q {
+  font-family: var(--display);
+  font-size: 24px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Results */
+.sx-results {
+  flex: 1;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 8px 24px 32px;
+}
+.sx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sx-hit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 18px 22px 20px;
+  text-align: left;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--rule);
+  transition:
+    box-shadow var(--t) var(--ease),
+    background-color var(--t) var(--ease);
+}
+.sx-hit:hover {
+  background: #fafafb;
+  box-shadow: 0 0 0 1px var(--rule-strong);
+}
+.sx-hit.is-active {
+  background: #fff;
+  box-shadow:
+    0 0 0 1.5px var(--gold),
+    0 12px 28px -16px rgba(0, 12, 31, 0.3);
+}
+.sx-hit-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sx-hit-num {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 7px;
+  background: #f0f1f3;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--navy);
+  transition: background-color var(--t) var(--ease);
+}
+.sx-hit.is-active .sx-hit-num,
+.sx-hit:hover .sx-hit-num {
+  background: var(--gold);
+}
+.sx-hit-type {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.sx-hit-loc {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.sx-hit-title {
+  margin-top: 2px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.sx-hit-snip {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.sx-hit-snip mark {
+  background: var(--gold-wash-strong);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 3px;
+}
+
+/* Pinned bottom bar */
+.sx-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  width: 100%;
+  padding: 22px 24px 14px;
+  background: linear-gradient(rgba(255, 255, 255, 0), #fff 32%);
+}
+.sx-dock > * {
+  max-width: 760px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.sx-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 60px;
+  padding: 0 8px 0 22px;
+  border-radius: 30px;
+  background: #fff;
+  border: 1px solid var(--rule-strong);
+  box-shadow: 0 18px 40px -22px rgba(0, 24, 84, 0.32);
+  color: var(--muted);
+  transition: border-color var(--t) var(--ease);
+}
+.sx-bar:focus-within {
+  border-color: var(--navy);
+}
+.sx-bar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 16.5px;
+  color: var(--ink);
+}
+.sx-bar input::placeholder {
+  color: var(--faint);
+}
+.sx-clear {
+  border-radius: 50%;
+}
+.sx-go {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--navy);
+  color: #fff;
+  transition: background-color var(--t-fast) var(--ease);
+}
+.sx-go:hover {
+  background: var(--navy-soft);
+}
+.sx-scope {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.sx-toggle {
+  position: relative;
+  cursor: pointer;
+}
+.sx-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.sx-toggle span {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: var(--pill);
+  font-size: 12.5px;
+  color: var(--muted);
+  background: #f3f4f6;
+  text-decoration: line-through;
+  text-decoration-color: rgba(0, 12, 31, 0.3);
+  transition: background-color var(--t) var(--ease), color var(--t) var(--ease), box-shadow var(--t) var(--ease);
+}
+.sx-toggle input:checked + span {
+  background: #fff;
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+.sx-toggle input:focus-visible + span {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Empty state: centred */
+.sx--empty .sx-main {
+  justify-content: center;
+}
+.sx-stage {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 24px 24px 10vh;
+  text-align: center;
+}
+.sx-title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(40px, 4.6vw, 62px);
+  line-height: 1.08;
+  color: var(--ink);
+}
+.sx-sub {
+  margin-top: 14px;
+  font-size: 17px;
+  color: var(--muted);
+}
+.sx--empty .sx-dock {
+  position: static;
+  margin-top: 32px;
+  padding: 0;
+  background: none;
+}
+.sx-recent {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 28px;
+}
+.sx-tip {
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.sx-tip .link {
+  color: var(--navy);
+  font-weight: 600;
+}
+.sx-paused {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  padding: 10px 18px;
+  border-radius: var(--pill);
+  background: #fdf3f3;
+  font-size: 14px;
+  color: var(--crimson);
+}
+.sx-filtered {
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* No matches */
+.sx-none {
+  padding: 8vh 0 24px;
+  text-align: center;
+}
+.sx-none-title {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(56px, 7vw, 96px);
+  line-height: 1;
+  color: var(--ink);
+}
+.sx-none-text {
+  margin: 18px auto 0;
+  max-width: 40ch;
+  font-size: 17px;
+  color: var(--ink-2);
+}
+.sx-none-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin: 28px 0 18px;
+}
+.sx-none-actions .btn {
+  border-radius: var(--pill);
+}
+
+/* Source sidebar */
+.sx-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: var(--sx-h);
+  background: #f3f4f6;
+  border-left: 1px solid var(--rule);
+  animation: sx-in 360ms var(--ease-out) both;
+}
+@keyframes sx-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sx-side-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 10px 24px;
+  background: #fff;
+}
+.sx-side-type {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sx-side-title {
+  margin-top: 4px;
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.sx-side-head .icon-btn {
+  border-radius: 50%;
+}
+.sx-side-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 24px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--rule);
+}
+.sx-side-actions .btn {
+  border-radius: var(--pill);
+}
+.sx-side-page {
+  margin-left: auto;
+}
+.sx-side-canvas {
+  position: relative;
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 28px 64px;
+  animation: fade 280ms var(--ease) both;
+}
+.sx-side-canvas .page {
+  font-size: 15.5px;
+  padding: 40px 40px 32px;
+  border-radius: 10px;
+}
+
+/* Phones: source opens full screen */
+@media (max-width: 900px) {
+  .sx,
+  .sx.has-side {
+    display: block;
+    height: auto;
+    min-height: calc(100dvh - 56px);
+  }
+  .sx-main {
+    overflow: visible;
+    min-height: calc(100dvh - 56px);
+  }
+  .sx-head {
+    top: 56px;
+  }
+  .public-app .sx-head {
+    top: 64px;
+  }
+  .sx-results {
+    padding: 8px 14px 24px;
+  }
+  .sx-dock {
+    position: sticky;
+    bottom: 0;
+    padding: 18px 12px 10px;
+  }
+  .sx-side {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    height: 100dvh;
+  }
+  .sx-side-canvas {
+    padding: 16px 10px 48px;
+  }
+  .sx-side-canvas .page {
+    padding: 28px 18px 24px;
+  }
+}

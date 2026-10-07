@@ -8,6 +8,7 @@ import "@/styles/inner.css";
 import "@/styles/workspace.css";
 import "@/styles/type.css";
 import "@/styles/chat.css";
+import "@/styles/search.css";
 
 // Display headlines: Caslon, the face of legal and constitutional printing.
 const display = Libre_Caslon_Display({
