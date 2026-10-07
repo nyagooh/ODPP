@@ -1,0 +1,595 @@
+/* Signature system: citation numbers + editorial rules, the composer, passages. */
+
+/* ---------- Wordmark ---------- */
+
+.wm {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--navy);
+}
+.wm-seal {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: var(--navy);
+  color: #fff;
+  border-radius: 9px;
+  position: relative;
+  font-family: var(--serif);
+  font-size: 18px;
+  line-height: 1;
+}
+.wm-seal::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 6px;
+  height: 2px;
+  background: var(--gold);
+}
+.wm-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.wm-name {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+.wm-sub {
+  font-size: 12.5px;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+.on-navy .wm {
+  color: #fff;
+}
+.on-navy .wm-seal {
+  background: #fff;
+  color: var(--navy);
+}
+.on-navy .wm-sub {
+  color: var(--navy-text);
+}
+
+/* ---------- Composer ---------- */
+
+.composer {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 12px;
+  background: var(--surface);
+}
+.composer::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--t-slow) var(--ease-out);
+  pointer-events: none;
+}
+.composer:focus-within::after {
+  transform: scaleX(1);
+}
+.composer-input {
+  width: 100%;
+  resize: none;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  line-height: 1.45;
+  overflow: hidden;
+}
+.composer-input::placeholder {
+  color: var(--faint);
+}
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.composer-send {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--navy);
+  color: #fff;
+  transition: background-color var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.composer-send:hover {
+  background: var(--navy-soft);
+}
+.composer-send:hover svg {
+  transform: translateX(2px);
+}
+.composer-send svg {
+  transition: transform var(--t) var(--ease);
+}
+.composer-send:active {
+  transform: translateY(1px);
+}
+
+/* Hero: an underlined field, not a glowing box */
+.composer--hero {
+  border-bottom: 2px solid var(--navy);
+  padding: 8px 0 14px;
+}
+.composer--hero::after {
+  bottom: -2px;
+}
+.composer--hero .composer-input {
+  font-family: var(--serif);
+  font-size: clamp(22px, 2.2vw, 28px);
+  padding: 6px 0;
+}
+.composer--hero .composer-send {
+  width: 52px;
+  height: 52px;
+}
+
+/* Inline / dock: a bordered field with square corners */
+.composer--box {
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--r-field);
+  padding: 10px 10px 10px 22px;
+  align-items: center;
+  box-shadow:
+    0 1px 2px rgba(0, 12, 31, 0.04),
+    0 16px 36px -22px rgba(0, 24, 84, 0.28);
+  transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease);
+}
+.composer--box:hover {
+  border-color: rgba(0, 12, 31, 0.3);
+}
+.composer--box:focus-within {
+  border-color: var(--navy);
+}
+.composer--box::after {
+  left: 22px;
+  right: auto;
+  width: 140px;
+  bottom: -1px;
+}
+.composer--box .composer-input {
+  font-size: 18px;
+  padding: 10px 0;
+}
+.composer--box .composer-send {
+  width: 40px;
+  height: 40px;
+}
+
+.composer--compact {
+  padding: 4px 4px 4px 16px;
+  border-radius: 12px;
+  align-items: center;
+  border-width: 1px;
+  border-color: var(--rule-strong);
+  box-shadow: none;
+}
+.composer--compact .composer-input {
+  font-size: 15px;
+  padding: 6px 0;
+}
+.composer--compact .composer-send {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+.composer--compact::after {
+  left: 16px;
+  width: 80px;
+}
+
+/* Mode switch: Search ─── Ask */
+.modes {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+.mode {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 6px 0;
+  position: relative;
+  transition: color var(--t) var(--ease);
+}
+.mode[aria-pressed="true"] {
+  color: var(--navy);
+}
+.mode:hover {
+  color: var(--navy);
+}
+.modes-line {
+  width: 40px;
+  height: 1px;
+  background: var(--rule-strong);
+}
+.modes-marker {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background: var(--gold);
+  transition: left var(--t-slow) var(--ease-out), width var(--t-slow) var(--ease-out);
+}
+
+/* Scope */
+.scope {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.scope-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  color: var(--navy);
+  font-weight: 600;
+}
+.scope-btn svg {
+  transition: transform var(--t) var(--ease);
+}
+.scope-btn[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+.scope-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 30;
+  min-width: 320px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-field);
+  box-shadow: var(--shadow-float);
+  padding: 10px;
+  animation: enter var(--t) var(--ease) both;
+}
+.scope-opt {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+.scope-opt {
+  border-radius: 10px;
+}
+.scope-opt:hover {
+  background: var(--surface-2);
+}
+.scope-opt input {
+  accent-color: var(--navy);
+  margin: 4px 0 0;
+  width: 15px;
+  height: 15px;
+}
+.scope-opt strong {
+  display: block;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+.scope-opt span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---------- Citation marker ---------- */
+
+.cite {
+  display: inline-block;
+  margin: 0 1px 0 4px;
+  padding: 0 4px;
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1.5;
+  vertical-align: 0.18em;
+  color: var(--navy);
+  border-bottom: 2px solid var(--gold);
+  border-radius: 1px 1px 0 0;
+  transition: background-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.cite:hover,
+.cite.is-hot {
+  background: var(--gold);
+}
+.cite.is-open {
+  background: var(--navy);
+  color: #fff;
+}
+
+/* A statement backed by a citation */
+.claim {
+  transition: background-color var(--t) var(--ease), box-shadow var(--t) var(--ease);
+  border-radius: 1px;
+}
+.claim.is-hot {
+  background: var(--gold-wash);
+  box-shadow: 0 0 0 2px var(--gold-wash);
+}
+.claim.is-open {
+  background: linear-gradient(transparent 92%, var(--gold) 92%);
+}
+
+/* ---------- Numbered source entry (the signature) ---------- */
+
+.ref {
+  display: block;
+  padding: 18px 0 22px;
+  position: relative;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.ref-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+.ref-num {
+  font-family: var(--serif);
+  font-size: 22px;
+  line-height: 1;
+  color: var(--navy);
+  font-variant-numeric: lining-nums tabular-nums;
+  min-width: 26px;
+}
+.ref-line {
+  flex: 1;
+  height: 1px;
+  background: var(--rule);
+  position: relative;
+  overflow: hidden;
+}
+.ref-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--t-slow) var(--ease-out);
+}
+.ref.is-hot .ref-line::after,
+.ref:hover .ref-line::after,
+.ref.is-open .ref-line::after {
+  transform: scaleX(1);
+}
+.ref.is-hot .ref-line,
+.ref:hover .ref-line {
+  height: 2px;
+}
+.ref-type {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ref-title {
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.25;
+  color: var(--navy);
+  margin: 4px 0 4px;
+}
+.ref-loc {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.ref-quote {
+  margin-top: 12px;
+  padding-left: 14px;
+  border-left: 2px solid var(--rule-strong);
+  font-family: var(--serif);
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  transition: border-color var(--t) var(--ease), background-color var(--t) var(--ease);
+}
+.ref.is-hot .ref-quote,
+.ref:hover .ref-quote,
+.ref.is-open .ref-quote {
+  border-left-color: var(--gold);
+}
+.ref-open {
+  position: absolute;
+  top: 16px;
+  right: 0;
+  padding-left: 10px;
+  background: var(--surface);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy);
+  display: inline-flex;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity var(--t) var(--ease), transform var(--t) var(--ease);
+}
+.ref:hover .ref-open,
+.ref:focus-visible .ref-open,
+.ref.is-hot .ref-open {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Document page & cited passage ---------- */
+
+.page {
+  background: #fff;
+  border-radius: 6px;
+  color: #1b2333;
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.7;
+  padding: 64px 72px 56px;
+  position: relative;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.06),
+    0 18px 48px -24px rgba(0, 24, 84, 0.22);
+}
+.page-running {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 28px;
+}
+.page h4 {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--ink);
+  margin: 6px 0 14px;
+}
+.page h4:not(:first-child) {
+  margin-top: 28px;
+}
+.page-folio {
+  margin-top: 36px;
+  text-align: center;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.clause {
+  position: relative;
+  margin: 0 -14px 10px;
+  padding: 2px 14px;
+  transition: background-color 700ms var(--ease);
+}
+.clause[data-indent="1"] {
+  padding-left: 46px;
+}
+.clause::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gold);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 520ms var(--ease-out);
+}
+.clause.is-cited {
+  background: var(--gold-wash);
+}
+.clause.is-cited::before {
+  transform: scaleY(1);
+}
+/* Joined highlight across consecutive cited clauses */
+.clause.is-cited + .clause.is-cited {
+  margin-top: -10px;
+  padding-top: 12px;
+}
+.clause.is-reveal {
+  animation: reveal 1100ms var(--ease) both;
+}
+@keyframes reveal {
+  0% {
+    background-color: transparent;
+  }
+  45% {
+    background-color: var(--gold-wash-strong);
+  }
+  100% {
+    background-color: var(--gold-wash);
+  }
+}
+.clause-tag {
+  position: absolute;
+  left: -52px;
+  top: 4px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+  border-bottom: 2px solid var(--gold);
+  padding: 0 3px;
+  line-height: 1.5;
+}
+.clause mark {
+  background: var(--gold-wash-strong);
+  color: inherit;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px var(--gold-wash-strong);
+}
+.clause mark.is-current {
+  background: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+@media (max-width: 720px) {
+  .page {
+    padding: 36px 22px 32px;
+    font-size: 16px;
+  }
+  .clause-tag {
+    position: static;
+    display: inline-block;
+    margin-right: 8px;
+  }
+  .clause::before {
+    left: 0;
+  }
+}
+
+/* ---------- Status dot ---------- */
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  display: inline-block;
+  flex: none;
+}
+.dot--crimson {
+  background: var(--crimson);
+}
+.dot--gold {
+  background: var(--gold);
+}
